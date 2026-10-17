@@ -1,5 +1,9 @@
 import express,{Request,Response,NextFunction} from 'express'; import cors from 'cors'; import helmet from 'helmet'; import cookieParser from 'cookie-parser'; import rateLimit from 'express-rate-limit'; import bcrypt from 'bcryptjs'; import jwt from 'jsonwebtoken'; import {PrismaClient,Stage,Prisma} from '@prisma/client'; import {z,ZodError} from 'zod'; import 'dotenv/config';
-const app=express(); const prisma=new PrismaClient(); const stages=Object.values(Stage); const secret=process.env.JWT_SECRET||'local-only-secret-change-this-before-deploying-12345';
+const app=express();
+// Render runs the service behind a reverse proxy; trust one proxy hop so
+// express-rate-limit can safely read the forwarded client IP.
+app.set('trust proxy', 1);
+const prisma=new PrismaClient(); const stages=Object.values(Stage); const secret=process.env.JWT_SECRET||'local-only-secret-change-this-before-deploying-12345';
 app.use(helmet());
 
 // Allow the stable production domain, localhost, and Vercel preview URLs
