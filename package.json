@@ -1,17 +1,16 @@
 {
   "name": "mini-ats",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "workspaces": [
     "frontend",
     "backend"
   ],
   "scripts": {
-    "dev": "concurrently -k -n API,WEB \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-    "build": "npm run build -w backend && npm run build -w frontend",
-    "lint": "npm run lint -w backend && npm run lint -w frontend"
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w backend\""
   },
-  "devDependencies": {
-    "concurrently": "^9.1.2"
+  "overrides": {
+    "@types/express": "4.17.25",
+    "@types/express-serve-static-core": "4.19.9"
   }
 }
