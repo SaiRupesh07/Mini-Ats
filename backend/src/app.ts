@@ -1,8 +1,58 @@
 import express,{Request,Response,NextFunction} from 'express'; import cors from 'cors'; import helmet from 'helmet'; import cookieParser from 'cookie-parser'; import rateLimit from 'express-rate-limit'; import bcrypt from 'bcryptjs'; import jwt from 'jsonwebtoken'; import {PrismaClient,Stage,Prisma} from '@prisma/client'; import {z,ZodError} from 'zod'; import 'dotenv/config';
 const app=express(); const prisma=new PrismaClient(); const stages=Object.values(Stage); const secret=process.env.JWT_SECRET||'local-only-secret-change-this-before-deploying-12345';
-app.use(helmet()); app.use(cors({origin:process.env.FRONTEND_URL||'http://localhost:5173',credentials:true})); app.use(express.json({limit:'1mb'})); app.use(cookieParser());
-// Reject cross-origin state-changing browser requests. SameSite cookies provide a second layer.
-app.use((req,res,next)=>{if(['POST','PATCH','PUT','DELETE'].includes(req.method)){const origin=req.get('origin');const expected=process.env.FRONTEND_URL||'http://localhost:5173';if(origin&&origin!==expected){res.status(403).json({error:'Request origin is not allowed.'});return}}next()});
+app.use(helmet());
+
+// Allow the stable production domain, localhost, and Vercel preview URLs
+// belonging to this project. Keep credentialed CORS restricted to this allowlist.
+const productionOrigin = 'https://mini-ats-theta.vercel.app';
+
+function isAllowedOrigin(origin?: string): boolean {
+  if (!origin) return true;
+
+  if (
+    origin === productionOrigin ||
+    origin === 'http://localhost:5173' ||
+    origin === (process.env.FRONTEND_URL || '')
+  ) {
+    return true;
+  }
+
+  try {
+    const url = new URL(origin);
+    return (
+      url.protocol === 'https:' &&
+      url.hostname.startsWith('mini-') &&
+      url.hostname.endsWith('-devarinti-sai-rupeshs-projects.vercel.app')
+    );
+  } catch {
+    return false;
+  }
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Origin not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+app.use(express.json({limit:'1mb'}));
+app.use(cookieParser());
+
+// Reject cross-origin state-changing browser requests using the same allowlist.
+app.use((req,res,next)=>{
+  if(['POST','PATCH','PUT','DELETE'].includes(req.method)){
+    const origin=req.get('origin');
+    if(origin && !isAllowedOrigin(origin)){
+      res.status(403).json({error:'Request origin is not allowed.'});
+      return;
+    }
+  }
+  next();
+});
 type AuthedRequest=Request & {user?:{id:string;name:string;email:string}};
 function auth(req:AuthedRequest,res:Response,next:NextFunction){const token=req.cookies?.ats_token; if(!token){res.status(401).json({error:'Please log in to continue.'});return} try{req.user=jwt.verify(token,secret) as {id:string;name:string;email:string}; next()}catch{res.clearCookie('ats_token');res.status(401).json({error:'Your session expired. Please log in again.'})}}
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30,standardHeaders:true,legacyHeaders:false});
