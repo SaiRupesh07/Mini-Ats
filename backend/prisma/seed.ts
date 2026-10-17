@@ -9,19 +9,22 @@ async function main(): Promise<void> {
   const demoEmail = 'demo@miniats.dev';
   const demoPassword = 'DemoATS2026!';
 
-  let user = await prisma.user.findUnique({
+  // Create the demo account or reset its password if it already exists.
+  const passwordHash = await bcrypt.hash(demoPassword, 12);
+
+  const user = await prisma.user.upsert({
     where: { email: demoEmail },
+    update: {
+      passwordHash,
+    },
+    create: {
+      name: 'Demo Recruiter',
+      email: demoEmail,
+      passwordHash,
+    },
   });
 
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        name: 'Demo Recruiter',
-        email: demoEmail,
-        passwordHash: await bcrypt.hash(demoPassword, 12),
-      },
-    });
-  }
+  console.log(`Demo account ready: ${demoEmail}`);
 
   const existingCandidates = await prisma.candidate.count({
     where: { recruiterId: user.id },
@@ -141,7 +144,7 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log('Demo account: demo@miniats.dev / DemoATS2026!');
+  console.log('Demo login: demo@miniats.dev / DemoATS2026!');
 }
 
 main()
