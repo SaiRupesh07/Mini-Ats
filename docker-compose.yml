@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ats
+      POSTGRES_PASSWORD: ats_dev_password
+      POSTGRES_DB: mini_ats
+    ports:
+      - "5432:5432"
+    volumes:
+      - ats_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ats -d mini_ats"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  ats_postgres:

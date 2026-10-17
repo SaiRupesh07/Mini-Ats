@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Stage {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+
+model User {
+  id           String             @id @default(uuid())
+  name         String
+  email        String             @unique
+  passwordHash String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  candidates   Candidate[]
+  activities   CandidateActivity[]
+  stageChanges StageHistory[]
+}
+
+model Candidate {
+  id              String             @id @default(uuid())
+  recruiterId     String
+  name            String
+  email           String
+  phone           String?
+  jobTitle        String
+  department      String
+  experienceYears Float              @default(0)
+  skills          String[]           @default([])
+  resumeUrl       String?
+  stage           Stage              @default(APPLIED)
+  source          String             @default("Direct")
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  recruiter       User               @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  history         StageHistory[]
+  activities      CandidateActivity[]
+
+  @@unique([recruiterId, email])
+  @@index([recruiterId, stage])
+  @@index([recruiterId, createdAt])
+  @@index([recruiterId, department])
+}
+
+model StageHistory {
+  id           String    @id @default(uuid())
+  candidateId  String
+  previousStage Stage?
+  newStage     Stage
+  changedById  String
+  note         String?
+  createdAt    DateTime  @default(now())
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  changedBy    User      @relation(fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
+}
+
+model CandidateActivity {
+  id           String    @id @default(uuid())
+  candidateId  String
+  actorId      String
+  activityType String
+  description  String
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  actor        User      @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, createdAt])
+}
