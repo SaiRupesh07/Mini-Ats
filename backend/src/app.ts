@@ -4,6 +4,13 @@ const app=express();
 // express-rate-limit can safely read the forwarded client IP.
 app.set('trust proxy', 1);
 const prisma=new PrismaClient(); const stages=Object.values(Stage); const secret=process.env.JWT_SECRET||'local-only-secret-change-this-before-deploying-12345';
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
+  sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+  path: '/',
+  maxAge: 7 * 86400000,
+};
 app.use(helmet());
 
 // Allow the stable production domain, localhost, and Vercel preview URLs
@@ -62,9 +69,9 @@ function auth(req:AuthedRequest,res:Response,next:NextFunction){const token=req.
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30,standardHeaders:true,legacyHeaders:false});
 const userSafe=(u:any)=>({id:u.id,name:u.name,email:u.email});
 app.get('/api/health',(_req,res)=>res.json({status:'ok'}));
-app.post('/api/auth/register',authLimiter,async(req:Request,res:Response,next:NextFunction)=>{try{const d=z.object({name:z.string().trim().min(2).max(80),email:z.string().trim().email().transform(v=>v.toLowerCase()),password:z.string().min(8).max(100)}).parse(req.body); if(await prisma.user.findUnique({where:{email:d.email}})){res.status(409).json({error:'An account with this email already exists.'});return} const u=await prisma.user.create({data:{name:d.name,email:d.email,passwordHash:await bcrypt.hash(d.password,12)}});const token=jwt.sign(userSafe(u),secret,{expiresIn:'7d'});res.cookie('ats_token',token,{httpOnly:true,secure:process.env.COOKIE_SECURE==='true',sameSite:'lax',path:'/',maxAge:7*86400000});res.status(201).json({user:userSafe(u)})}catch(e){next(e)}});
-app.post('/api/auth/login',authLimiter,async(req:Request,res:Response,next:NextFunction)=>{try{const d=z.object({email:z.string().email().transform(v=>v.toLowerCase()),password:z.string().min(1)}).parse(req.body);const u=await prisma.user.findUnique({where:{email:d.email}});if(!u||!(await bcrypt.compare(d.password,u.passwordHash))){res.status(401).json({error:'Email or password is incorrect.'});return}res.cookie('ats_token',jwt.sign(userSafe(u),secret,{expiresIn:'7d'}),{httpOnly:true,secure:process.env.COOKIE_SECURE==='true',sameSite:'lax',path:'/',maxAge:7*86400000});res.json({user:userSafe(u)})}catch(e){next(e)}});
-app.post('/api/auth/logout',(_req,res)=>{res.clearCookie('ats_token',{httpOnly:true,secure:process.env.COOKIE_SECURE==='true',sameSite:'lax',path:'/'});res.json({message:'Logged out'})});
+app.post('/api/auth/register',authLimiter,async(req:Request,res:Response,next:NextFunction)=>{try{const d=z.object({name:z.string().trim().min(2).max(80),email:z.string().trim().email().transform(v=>v.toLowerCase()),password:z.string().min(8).max(100)}).parse(req.body); if(await prisma.user.findUnique({where:{email:d.email}})){res.status(409).json({error:'An account with this email already exists.'});return} const u=await prisma.user.create({data:{name:d.name,email:d.email,passwordHash:await bcrypt.hash(d.password,12)}});const token=jwt.sign(userSafe(u),secret,{expiresIn:'7d'});res.cookie('ats_token',token,cookieOptions);res.status(201).json({user:userSafe(u)})}catch(e){next(e)}});
+app.post('/api/auth/login',authLimiter,async(req:Request,res:Response,next:NextFunction)=>{try{const d=z.object({email:z.string().email().transform(v=>v.toLowerCase()),password:z.string().min(1)}).parse(req.body);const u=await prisma.user.findUnique({where:{email:d.email}});if(!u||!(await bcrypt.compare(d.password,u.passwordHash))){res.status(401).json({error:'Email or password is incorrect.'});return}res.cookie('ats_token',jwt.sign(userSafe(u),secret,{expiresIn:'7d'}),cookieOptions);res.json({user:userSafe(u)})}catch(e){next(e)}});
+app.post('/api/auth/logout',(_req,res)=>{res.clearCookie('ats_token',{httpOnly: cookieOptions.httpOnly, secure: cookieOptions.secure, sameSite: cookieOptions.sameSite, path: cookieOptions.path});res.json({message:'Logged out'})});
 app.get('/api/auth/me',auth,(req:AuthedRequest,res)=>res.json({user:req.user}));
 const candidateSchema=z.object({name:z.string().trim().min(2).max(120),email:z.string().trim().email().transform(v=>v.toLowerCase()),phone:z.string().trim().max(40).optional().nullable(),jobTitle:z.string().trim().min(2).max(120),department:z.string().trim().min(1).max(80),experienceYears:z.coerce.number().min(0).max(70),skills:z.array(z.string().trim().min(1).max(50)).max(30).default([]),resumeUrl:z.union([z.string().url(),z.literal('')]).optional().nullable(),source:z.string().trim().min(1).max(80).default('Direct'),notes:z.string().max(5000).optional().nullable()});
 const pickCandidate=(d:any)=>({...d,phone:d.phone||null,resumeUrl:d.resumeUrl||null,notes:d.notes||null});
