@@ -2,9 +2,16 @@
 
 A full-stack recruiter workspace for managing candidates, tracking hiring stages, searching and filtering applicants, and monitoring recruitment metrics. Built with React + TypeScript + Vite + Tailwind CSS, Express + TypeScript, Prisma, and PostgreSQL.
 
+## Live Demo
+
+- **Live Application:** https://mini-ats-theta.vercel.app/
+- **Backend API:** https://mini-ats-0xzb.onrender.com
+- **API Health Check:** https://mini-ats-0xzb.onrender.com/api/health
+- **GitHub Repository:** https://github.com/SaiRupesh07/Mini-Ats
+
 ## Features
 
-- Recruiter registration, login, logout, protected API routes, bcrypt password hashing, HTTP-only session cookie.
+- Recruiter registration, login, logout, protected API routes, bcrypt password hashing, and HTTP-only session cookies.
 - Database-backed dashboard KPIs, candidate activity chart, stage distribution, recent candidates, and activity.
 - Candidate create/read/update/delete, profile and timeline, resume URL, skills, notes, department, source, and experience.
 - Six-stage pipeline with persisted transitions, transition notes, history, and activity records.
@@ -17,62 +24,69 @@ A full-stack recruiter workspace for managing candidates, tracking hiring stages
 - Node.js 20 or newer and npm 10+
 - Docker Desktop (or a local PostgreSQL 15+)
 
-## Run locally
+## Run Locally
 
-1. Extract the ZIP and open a terminal in `mini-ats`.
+1. Clone the repository:
+
+```bash
+   git clone https://github.com/SaiRupesh07/Mini-Ats.git
+   cd Mini-Ats
+```
+
 2. Install workspace dependencies:
 
-   ```bash
+```bash
    npm install
-   ```
+```
 
-3. Create the backend environment file. Copy root `.env.example` to `backend/.env`. Change `JWT_SECRET` to a long random value before exposing the app.
+3. Create the backend environment file by copying the root `.env.example` to `backend/.env`. Set a unique, long random `JWT_SECRET`.
+
 4. Start PostgreSQL:
 
-   ```bash
+```bash
    docker compose up -d postgres
-   ```
+```
 
-5. Generate Prisma Client, create/apply the development migration, and seed the demo account:
+5. Generate Prisma Client, apply the development migration, and seed demo data:
 
-   ```bash
+```bash
    npm run db:generate -w backend
    npm run db:migrate -w backend -- --name init
    npm run db:seed -w backend
-   ```
+```
 
-6. Start the API and web client in separate terminals, or use `npm run dev` at the root:
+6. Start the application:
 
-   ```bash
+```bash
    npm run dev
-   ```
+```
 
-   Frontend: http://localhost:5173  
-   API health: http://localhost:4000/api/health
+   - Frontend: http://localhost:5173
+   - API health: http://localhost:4000/api/health
 
-### Demo account
+## Demo Account
 
-- Email: `demo@miniats.dev`
-- Password: `DemoATS2026!`
+- **Email:** `demo@miniats.dev`
+- **Password:** `DemoATS2026!`
 
-The seed command prints these credentials. Change/remove the demo account before production use.
+Use the seed command to create the demo account locally. Do not use demo credentials for a public production deployment.
 
-## Environment variables
+## Environment Variables
 
 Backend (`backend/.env`):
 
 | Variable | Purpose | Local default/example |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://ats:ats_dev_password@localhost:5432/mini_ats?schema=public` |
-| `JWT_SECRET` | Signs the session token | Set a unique random secret (32+ characters) |
-| `FRONTEND_URL` | Exact frontend origin allowed by CORS | `http://localhost:5173` |
-| `API_PORT` | API listen port | `4000` |
+| `JWT_SECRET` | Signs the session token | Use a unique random secret of 32+ characters |
+| `FRONTEND_URL` | Frontend origin allowed by CORS | `http://localhost:5173` |
+| `API_PORT` | Local API port fallback | `4000` |
 | `NODE_ENV` | Runtime mode | `development` |
-| `COOKIE_SECURE` | Send cookie only over HTTPS | `false` locally, `true` in production |
+| `COOKIE_SECURE` | Send cookies only over HTTPS | `false` locally, `true` in production |
 
-Frontend optional environment (`frontend/.env.local`): `VITE_API_URL=https://your-api-domain.example/api`. Vite variables are public; never put secrets there.
+Frontend optional environment (`frontend/.env.local`): `VITE_API_URL=https://mini-ats-0xzb.onrender.com/api`. Vite variables are public; never put secrets in them.
 
-## API overview
+## API Overview
 
 All endpoints use JSON. Authenticated endpoints use the HTTP-only `ats_token` cookie. Error responses use `{ "error": "..." }`; list responses include `data` and `pagination`.
 
@@ -103,27 +117,28 @@ npm run build
 npm test -w backend
 ```
 
-Run these after dependencies are installed. Database-dependent API behavior requires PostgreSQL and the migrations to be applied.
+Run these after installing dependencies. Database-dependent API behavior requires PostgreSQL and the migrations to be applied.
 
-## Deployment (Render + managed PostgreSQL example)
+## Deployment
 
-1. Push the extracted project to a GitHub repository.
-2. Create a managed PostgreSQL database and copy its **internal** connection string into backend `DATABASE_URL`.
-3. Deploy the backend as a Node web service from the monorepo root. Build command: `npm install && npm run db:generate -w backend && npm run build -w backend`. Start command: `npm run db:deploy -w backend && npm run start -w backend`. Set `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL`, `API_PORT=10000` (or the platform's assigned port), `NODE_ENV=production`, and `COOKIE_SECURE=true`. If the platform assigns `PORT`, update `backend/src/server.ts` to prefer `process.env.PORT` (recommended on platforms that require it).
-4. Deploy the frontend as a static site. Build command: `npm install && npm run build -w frontend`; publish directory: `frontend/dist`. Set `VITE_API_URL=https://your-backend-domain.example/api` at build time.
-5. Set backend `FRONTEND_URL` to the exact deployed frontend origin. Because authentication uses cookies, use HTTPS on both services and configure the same-site deployment appropriately. If frontend and API are on different registrable domains, browser third-party-cookie rules can block cookies; prefer same-site custom domains or update cookie `SameSite`/CSRF strategy deliberately.
-6. Run the seed command only if you want demo records. Do not use the demo account in production.
+- **Frontend:** Deployed on Vercel — https://mini-ats-theta.vercel.app/
+- **Backend:** Deployed on Render — https://mini-ats-0xzb.onrender.com
+- **Database:** PostgreSQL hosted on Neon.
 
-### Production security notes
+The backend uses Render's assigned `PORT` when available. Production environment variables are configured in the hosting provider dashboards.
 
-The app uses HTTP-only cookies, SameSite=Lax, strict CORS, and an Origin check for browser state-changing requests. Before a public production launch, review CSRF behavior against your exact hosting domains, configure rate limits at the edge, use same-site HTTPS domains, rotate secrets, and review privacy/retention requirements. This starter is not a substitute for a security review.
+For cookie-based authentication, use HTTPS, configure the exact frontend origin in `FRONTEND_URL`, and ensure the cookie and CSRF settings match the hosting domains. Keep database credentials and JWT secrets out of source control.
 
-## Project structure
+## Production Security Notes
+
+The app uses HTTP-only cookies, CORS restrictions, and an Origin check for browser state-changing requests. Before a public production launch, review CSRF behavior against the hosting domains, configure rate limits, rotate secrets, and review privacy and data-retention requirements. This starter is not a substitute for a security review.
+
+## Project Structure
 
 ```text
-mini-ats/
+Mini-Ats/
   frontend/src/App.tsx       # Auth, dashboard, candidate views, pipeline
-  frontend/src/api.ts        # Axios client and domain types
+  frontend/src/api.ts        # API client and domain types
   frontend/src/styles.css    # Responsive visual system
   backend/src/app.ts         # REST routes, auth, validation, error handling
   backend/src/server.ts      # API entrypoint
